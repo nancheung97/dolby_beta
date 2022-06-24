@@ -4,9 +4,6 @@ import android.content.Context;
 import android.net.Uri;
 import android.text.TextUtils;
 
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
-
 import com.raincat.dolby_beta.db.CloudDao;
 import com.raincat.dolby_beta.helper.ClassHelper;
 import com.raincat.dolby_beta.helper.EAPIHelper;
@@ -14,6 +11,9 @@ import com.raincat.dolby_beta.helper.SettingHelper;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+
+import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XposedBridge;
 
 
 /**
@@ -50,7 +50,17 @@ public class EAPIHook {
                     return;
                 String path = uri.getPath();
 
-                if (path.contains("v1/playlist/manipulate/tracks")) {
+                if (path.contains("song/enhance/player/url")) {
+                    original = EAPIHelper.modifyPlayer(original);
+                } else if (path.contains("song/enhance/download/url")) {
+                    JSONObject jsonObject = new JSONObject(original);
+                    JSONObject object = jsonObject.getJSONObject("data");
+                    JSONArray array = new JSONArray();
+                    array.put(object);
+                    jsonObject.put("data", array);
+                    original = EAPIHelper.modifyPlayer(jsonObject.toString())
+                            .replace("[", "").replace("]", "");
+                } else if (path.contains("v1/playlist/manipulate/tracks")) {
                     original = EAPIHelper.modifyManipulate(ClassHelper.HttpParams.getParams(context, eapi), original);
                 } else if (path.contains("song/like")) {
                     original = EAPIHelper.modifyLike(ClassHelper.HttpParams.getParams(context, eapi), original);
@@ -108,10 +118,11 @@ public class EAPIHook {
                     original = original.replace("\"waitTime\":60,", "\"waitTime\":5,");
                     CloudDao.getInstance(context).saveSong(Integer.parseInt(jsonObject.getString("id")), original);
                 } else if (path.contains("cloud/pub/v2")) {
-                    String songId = EAPIHelper.decrypt(ClassHelper.HttpParams.getParams(context, eapi).get("params")).getString("songid");
-                    EAPIHelper.uploadCloud(songId);
-                    original = CloudDao.getInstance(context).getSong(Integer.parseInt(songId));
+                    String songid = EAPIHelper.decrypt(ClassHelper.HttpParams.getParams(context, eapi).get("params")).getString("songid");
+                    EAPIHelper.uploadCloud(songid);
+                    original = CloudDao.getInstance(context).getSong(Integer.parseInt(songid));
                 }
+
                 param.setResult(param.getResult() instanceof JSONObject ? new JSONObject(original) : original);
             }
         });

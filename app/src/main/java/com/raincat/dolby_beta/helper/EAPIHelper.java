@@ -25,9 +25,12 @@ import java.util.regex.Pattern;
  */
 
 public class EAPIHelper {
-    private static Gson gson = new Gson();
+    private static final Gson gson = new Gson();
 
-    public static String modifyPlayer( String original) {
+    /**
+     * 解除下载加密
+     */
+    public static String modifyPlayer(String original) {
         NeteaseSongListBean listBean = gson.fromJson(original, NeteaseSongListBean.class);
 
         NeteaseSongListBean modifyListBean = new NeteaseSongListBean();
@@ -36,10 +39,13 @@ public class EAPIHelper {
         for (NeteaseSongListBean.DataBean dataBean : listBean.getData()) {
             //flag与8非0为云盘歌曲
             if ((dataBean.getFlag() & 0x8) == 0) {
+
                 dataBean.setFee(0);
                 dataBean.setFlag(0);
                 dataBean.setPayed(0);
                 dataBean.setFreeTrialInfo(null);
+                if (dataBean.getUrl() != null && dataBean.getUrl().contains("?"))
+                    dataBean.setUrl(dataBean.getUrl().substring(0, dataBean.getUrl().indexOf("?")));
             }
             modifyListBean.getData().add(dataBean);
         }
@@ -106,6 +112,7 @@ public class EAPIHelper {
         CloudHeader cloudHeader = new CloudHeader();
         cloudHeader.setOs("pc");
         cloudHeader.setAppver("2.7.1.198242");
+//        cloudHeader.setDeviceId(ExtraDao.getInstance(context).getExtra("deviceId"));
         Random random = new Random();
         cloudHeader.setRequestId(String.valueOf(random.nextInt() * (1000000 - 10000 + 1) + 10000));
         cloudHeader.setClientSign("60:45:CB:9A:C3:5E@@@WD-WCC2E6LCUS2U@@@@@@39cda0b9-b0aa-4e38-a7d5-e5e9b2f430176d0b275515819c796da324b0129703e2");
@@ -138,13 +145,11 @@ public class EAPIHelper {
         new Http("POST", "http://interface3.music.163.com/eapi/cloud/pub/v2", param, header).getResult();
     }
 
-    private static final Pattern REX_TYPE = Pattern.compile("\"type\":\\d+");
-
     /**
      * 音效
      */
     public static String modifyEffect(String originalContent) {
-        originalContent = REX_TYPE.matcher(originalContent).replaceAll("\"type\":1");
+        originalContent = Pattern.compile("\"type\":\\d+").matcher(originalContent).replaceAll("\"type\":1");
         return originalContent;
     }
 

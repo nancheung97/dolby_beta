@@ -72,7 +72,7 @@ public class Hooklite {
                             if (!SettingHelper.getInstance().getSetting(SettingHelper.master_key))
                                 return;
                             //音源代理
-                            new ProxyHook(context, versionCode, false);
+                            new ProxyHook(context, false);
                             //黑胶
                             if (SettingHelper.getInstance().isEnable(SettingHelper.black_key)) {
                                 new BlackHook(context, versionCode);
@@ -83,7 +83,7 @@ public class Hooklite {
                             //自动签到
                             new AutoSignInHook(context, versionCode);
                             //去广告与去升级
-                            new AdAndUpdateHook(context);
+                            new AdAndUpdateHook(context, versionCode);
                             //修复magisk冲突导致的无法读写外置sd卡
                             new MagiskFixHook(context);
                             //去掉内测与听歌识曲弹窗
@@ -101,7 +101,7 @@ public class Hooklite {
                                 //精简侧边栏
                                 new HideSidebarHook(context, versionCode);
                                 //移除Banner
-                                new HideBannerHook(context);
+                                new HideBannerHook(context, versionCode);
                                 //隐藏小红点
                                 new HideBubbleHook(context);
                                 //打开评论后优先显示最热评论
@@ -134,7 +134,7 @@ public class Hooklite {
                             }, intentFilter);
                         } else if (processName.equals(PACKAGE_NAME + ":play") && SettingHelper.getInstance().getSetting(SettingHelper.master_key)) {
                             //音源代理
-                            new ProxyHook(context, versionCode, true);
+                            new ProxyHook(context, true);
                             IntentFilter intentFilter = new IntentFilter();
                             intentFilter.addAction(msg_hook_play_process);
                             context.registerReceiver(new BroadcastReceiver() {

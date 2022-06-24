@@ -13,6 +13,7 @@ import com.raincat.dolby_beta.helper.FileHelper;
 import com.raincat.dolby_beta.helper.NotificationHelper;
 import com.raincat.dolby_beta.helper.SettingHelper;
 import com.raincat.dolby_beta.hook.AdAndUpdateHook;
+import com.raincat.dolby_beta.hook.AdExtraHook;
 import com.raincat.dolby_beta.hook.AutoSignInHook;
 import com.raincat.dolby_beta.hook.BlackHook;
 import com.raincat.dolby_beta.hook.CdnHook;
@@ -25,12 +26,14 @@ import com.raincat.dolby_beta.hook.HideBubbleHook;
 import com.raincat.dolby_beta.hook.HideSidebarHook;
 import com.raincat.dolby_beta.hook.HideTabHook;
 import com.raincat.dolby_beta.hook.InternalDialogHook;
+import com.raincat.dolby_beta.hook.LoginFixHook;
 import com.raincat.dolby_beta.hook.MagiskFixHook;
 import com.raincat.dolby_beta.hook.NightModeHook;
 import com.raincat.dolby_beta.hook.PlayerActivityHook;
 import com.raincat.dolby_beta.hook.ProxyHook;
 import com.raincat.dolby_beta.hook.SettingHook;
 import com.raincat.dolby_beta.hook.UserProfileHook;
+import com.raincat.dolby_beta.hook.ListentogetherHook;
 import com.raincat.dolby_beta.utils.Tools;
 
 import java.io.File;
@@ -83,22 +86,29 @@ public class Hook {
                             if (!SettingHelper.getInstance().getSetting(SettingHelper.master_key))
                                 return;
                             //音源代理
-                            new ProxyHook(context, versionCode, false);
+                            new ProxyHook(context, false);
                             //黑胶
                             if (SettingHelper.getInstance().isEnable(SettingHelper.black_key)) {
                                 new BlackHook(context, versionCode);
                                 deleteAdAndTinker();
+                            }
+                            //一起听
+                            if (SettingHelper.getInstance().isEnable(SettingHelper.listen_key)) {
+                                new ListentogetherHook(context, versionCode);
+
                             }
                             //不变灰
                             new GrayHook(context);
                             //自动签到
                             new AutoSignInHook(context, versionCode);
                             //去广告与去升级
-                            new AdAndUpdateHook(context);
+                            new AdAndUpdateHook(context, versionCode);
                             //修复magisk冲突导致的无法读写外置sd卡
                             new MagiskFixHook(context);
                             //去掉内测与听歌识曲弹窗
                             new InternalDialogHook(context, versionCode);
+                            //修复登录失败
+                            new LoginFixHook(context);
 //                            new TestHook(context);
                             ClassHelper.getCacheClassList(context, versionCode, () -> {
                                 //获取账号信息
@@ -114,14 +124,17 @@ public class Hook {
                                 //精简侧边栏
                                 new HideSidebarHook(context, versionCode);
                                 //移除Banner
-                                new HideBannerHook(context);
+                                new HideBannerHook(context, versionCode);
                                 //隐藏小红点
                                 new HideBubbleHook(context);
                                 //黑胶停转，隐藏K歌按钮
                                 new PlayerActivityHook(context, versionCode);
                                 //打开评论后优先显示最热评论
                                 new CommentHotClickHook(context);
+                                //绕过CDN责任链拦截器检测
                                 new CdnHook(context, versionCode);
+                                //广告移除增强
+                                new AdExtraHook();
 
                                 mainProcessInit = true;
                                 if (mainProcessInit && playProcessInit)
@@ -148,7 +161,7 @@ public class Hook {
                             }, intentFilter);
                         } else if (processName.equals(PACKAGE_NAME + ":play") && SettingHelper.getInstance().getSetting(SettingHelper.master_key)) {
                             //音源代理
-                            new ProxyHook(context, versionCode, true);
+                            new ProxyHook(context, true);
                             IntentFilter intentFilter = new IntentFilter();
                             intentFilter.addAction(msg_hook_play_process);
                             context.registerReceiver(new BroadcastReceiver() {
@@ -170,7 +183,7 @@ public class Hook {
         //关闭tinker
         Class<?> tinkerClass = XposedHelpers.findClassIfExists("com.tencent.tinker.loader.app.TinkerApplication", lpparam.classLoader);
         if (tinkerClass != null)
-            XposedHelpers.findAndHookConstructor(tinkerClass, int.class, String.class, new XC_MethodHook() {
+            XposedBridge.hookAllConstructors(tinkerClass, new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                     super.beforeHookedMethod(param);
